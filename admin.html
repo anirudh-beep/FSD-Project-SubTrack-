@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📅 SubTrack - Admin Panel</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <h1 class="logo">📅 SubTrack Admin</h1>
+            <nav class="nav">
+                <a href="admin.html" class="nav-link active">Dashboard</a>
+                <a href="index.html" class="nav-link">Back to App</a>
+                <button id="themeToggle" class="theme-toggle">🌙</button>
+                <button id="logoutBtn" class="logout-btn">Logout</button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="container">
+            <!-- Admin Summary Cards -->
+            <div class="summary-cards">
+                <div class="card">
+                    <h3>Total Users</h3>
+                    <p class="card-value" id="totalUsers">0</p>
+                </div>
+                <div class="card">
+                    <h3>Active Users</h3>
+                    <p class="card-value" id="activeUsers">0</p>
+                </div>
+                <div class="card">
+                    <h3>Total Subscriptions</h3>
+                    <p class="card-value" id="totalSubscriptions">0</p>
+                </div>
+                <div class="card">
+                    <h3>System Revenue</h3>
+                    <p class="card-value" id="systemRevenue">₹0</p>
+                </div>
+            </div>
+
+            <!-- System Analytics -->
+            <div class="card">
+                <h2>User Registration Trend</h2>
+                <canvas id="userTrendChart" width="400" height="200"></canvas>
+            </div>
+
+            <!-- User Management -->
+            <div class="card">
+                <h2>User Management</h2>
+                <div class="table-container">
+                    <table id="usersTable">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Subscriptions</th>
+                                <th>Total Spending</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- System Statistics -->
+            <div class="charts-grid">
+                <div class="card">
+                    <h3>Popular Categories</h3>
+                    <canvas id="categoriesChart" width="400" height="200"></canvas>
+                </div>
+                <div class="card">
+                    <h3>Payment Methods Usage</h3>
+                    <canvas id="paymentMethodsChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/auth.js"></script>
+    <script src="js/admin.js"></script>
+</body>
+</html>

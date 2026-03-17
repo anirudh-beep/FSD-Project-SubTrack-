@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📅 SubTrack - Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="SubTrack">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <h1 class="logo">📅 SubTrack</h1>
+            <nav class="nav">
+                <a href="index.html" class="nav-link active">Dashboard</a>
+                <a href="calendar.html" class="nav-link">Calendar</a>
+                <a href="analytics.html" class="nav-link">Analytics</a>
+                <a href="notifications.html" class="nav-link">
+                    Notifications
+                    <span id="notificationBadge" class="notification-badge" style="display: none;">0</span>
+                </a>
+                <a href="profile.html" class="nav-link">Profile</a>
+                <button id="themeToggle" class="theme-toggle">🌙</button>
+                <div class="user-menu">
+                    <button id="userMenuBtn" class="user-menu-btn">
+                        <span id="currentUserName">User</span> ▼
+                    </button>
+                    <div id="userDropdown" class="user-dropdown">
+                        <a href="#" id="switchAccount">Switch Account</a>
+                        <a href="#" id="changePassword">Change Password</a>
+                        <a href="#" id="logoutBtn">Logout</a>
+                    </div>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="container">
+            <!-- Summary Cards -->
+            <div class="summary-cards">
+                <div class="card">
+                    <h3>Total Subscriptions</h3>
+                    <p class="card-value" id="totalSubs">0</p>
+                </div>
+                <div class="card">
+                    <h3>Monthly Spending</h3>
+                    <p class="card-value" id="monthlySpending">₹0</p>
+                </div>
+                <div class="card">
+                    <h3>Auto-pay Enabled</h3>
+                    <p class="card-value" id="autopayCount">0</p>
+                </div>
+                <div class="card">
+                    <h3>Budget Status</h3>
+                    <div class="budget-ring" id="budgetRing">
+                        <svg width="80" height="80">
+                            <circle cx="40" cy="40" r="35" stroke="#e2e8f0" stroke-width="6" fill="none"/>
+                            <circle id="budgetProgress" cx="40" cy="40" r="35" stroke="#667eea" stroke-width="6" 
+                                    fill="none" stroke-dasharray="220" stroke-dashoffset="220" 
+                                    transform="rotate(-90 40 40)" class="progress-circle"/>
+                        </svg>
+                        <div class="budget-text">
+                            <span id="budgetPercentage">0%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Subscription Form -->
+            <div class="card form-card">
+                <h2>Add New Subscription</h2>
+                <form id="subscriptionForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="subName">Subscription Name</label>
+                            <input type="text" id="subName" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="amount">Amount (₹)</label>
+                            <input type="number" id="amount" min="1" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="startDate">Start Date</label>
+                            <input type="date" id="startDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="billingCycle">Billing Cycle</label>
+                            <select id="billingCycle" required>
+                                <option value="Monthly">Monthly</option>
+                                <option value="Yearly">Yearly</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="category">Category</label>
+                            <select id="category" required>
+                                <!-- Categories will be loaded dynamically -->
+                            </select>
+                            <button type="button" id="manageCategoriesBtn" class="btn-link">Manage Categories</button>
+                        </div>
+                        <div class="form-group">
+                            <label for="autopay">Auto-pay</label>
+                            <select id="autopay">
+                                <option value="ON">ON</option>
+                                <option value="OFF">OFF</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add Subscription</button>
+                </form>
+            </div>
+
+            <!-- Subscriptions Table -->
+            <div class="card">
+                <div class="table-header">
+                    <h2>Your Subscriptions</h2>
+                    <div class="table-actions">
+                        <button id="exportBtn" class="btn btn-secondary">Export</button>
+                        <button id="importBtn" class="btn btn-secondary">Import</button>
+                        <input type="file" id="importFile" accept=".json,.csv" style="display: none;">
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table id="subscriptionsTable">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Category</th>
+                                <th>Amount</th>
+                                <th>Next Renewal</th>
+                                <th>Status</th>
+                                <th>Payment Status</th>
+                                <th>Auto-pay</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="subscriptionsBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Analytics Chart -->
+            <div class="card">
+                <h2>Category-wise Spending</h2>
+                <canvas id="spendingChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </main>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmModal" class="modal">
+        <div class="modal-content">
+            <h3>Confirm Delete</h3>
+            <p>Are you sure you want to delete this subscription?</p>
+            <div class="modal-actions">
+                <button id="confirmDelete" class="btn btn-danger">Delete</button>
+                <button id="cancelDelete" class="btn btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Modal -->
+    <div id="paymentModal" class="modal">
+        <div class="modal-content payment-modal">
+            <h3>Payment Gateway</h3>
+            <div class="payment-methods">
+                <button class="payment-method active" data-method="card">💳 Card</button>
+                <button class="payment-method" data-method="upi">📱 UPI</button>
+                <button class="payment-method" data-method="wallet">👛 Wallet</button>
+            </div>
+            <div class="payment-form">
+                <div class="payment-details">
+                    <p>Subscription: <span id="paymentSubName"></span></p>
+                    <p>Amount: <span id="paymentAmount"></span></p>
+                </div>
+                <div id="cardForm" class="payment-form-section">
+                    <input type="text" placeholder="Card Number" maxlength="19">
+                    <div class="form-row">
+                        <input type="text" placeholder="MM/YY" maxlength="5">
+                        <input type="text" placeholder="CVV" maxlength="3">
+                    </div>
+                </div>
+                <div id="upiForm" class="payment-form-section" style="display: none;">
+                    <input type="text" placeholder="UPI ID">
+                </div>
+                <div id="walletForm" class="payment-form-section" style="display: none;">
+                    <select>
+                        <option>PayTM</option>
+                        <option>PhonePe</option>
+                        <option>Google Pay</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button id="processPayment" class="btn btn-success">Pay Now</button>
+                <button id="cancelPayment" class="btn btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Category Management Modal -->
+    <div id="categoryModal" class="modal">
+        <div class="modal-content">
+            <h3>Manage Categories</h3>
+            <div class="category-form">
+                <input type="text" id="newCategoryName" placeholder="Category Name">
+                <select id="categoryIcon">
+                    <option value="📺">📺 Entertainment</option>
+                    <option value="💻">💻 Software</option>
+                    <option value="📚">📚 Education</option>
+                    <option value="💪">💪 Fitness</option>
+                    <option value="🎵">🎵 Music</option>
+                    <option value="🎮">🎮 Gaming</option>
+                    <option value="📰">📰 News</option>
+                    <option value="☁️">☁️ Cloud</option>
+                </select>
+                <button id="addCategory" class="btn btn-primary">Add</button>
+            </div>
+            <div class="category-list" id="categoryList"></div>
+            <div class="modal-actions">
+                <button id="closeCategoryModal" class="btn btn-secondary">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Change Password Modal -->
+    <div id="changePasswordModal" class="modal">
+        <div class="modal-content">
+            <h3>Change Password</h3>
+            <form id="changePasswordForm">
+                <div class="form-group">
+                    <input type="password" id="currentPassword" placeholder="Current Password" required>
+                </div>
+                <div class="form-group">
+                    <input type="password" id="newPassword" placeholder="New Password" required>
+                </div>
+                <div class="form-group">
+                    <input type="password" id="confirmNewPassword" placeholder="Confirm New Password" required>
+                </div>
+                <div class="modal-actions">
+                    <button type="submit" class="btn btn-primary">Change Password</button>
+                    <button type="button" id="cancelPasswordChange" class="btn btn-secondary">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Account Switcher Modal -->
+    <div id="accountSwitchModal" class="modal">
+        <div class="modal-content">
+            <h3>Switch Account</h3>
+            <div id="accountList" class="account-list"></div>
+            <div class="modal-actions">
+                <button id="addNewAccount" class="btn btn-primary">Add New Account</button>
+                <button id="closeAccountSwitch" class="btn btn-secondary">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/charts.js"></script>
+    <script>
+        // PWA Installation
+        let deferredPrompt;
+        
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            showInstallPrompt();
+        });
+        
+        function showInstallPrompt() {
+            const installPrompt = $(`
+                <div class="install-prompt" id="installPrompt">
+                    <div class="install-prompt-content">
+                        <div>
+                            <strong>Install SubTrack</strong>
+                            <p>Install our app for a better experience!</p>
+                        </div>
+                        <div>
+                            <button id="installBtn" class="btn btn-primary">Install</button>
+                            <button id="dismissBtn" class="btn btn-secondary">Dismiss</button>
+                        </div>
+                    </div>
+                </div>
+            `);
+            
+            $('body').append(installPrompt);
+            $('#installPrompt').show();
+            
+            $('#installBtn').click(() => {
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    deferredPrompt.userChoice.then((choiceResult) => {
+                        if (choiceResult.outcome === 'accepted') {
+                            console.log('User accepted the install prompt');
+                        }
+                        deferredPrompt = null;
+                        $('#installPrompt').remove();
+                    });
+                }
+            });
+            
+            $('#dismissBtn').click(() => {
+                $('#installPrompt').remove();
+            });
+        }
+        
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then((registration) => {
+                        console.log('SW registered: ', registration);
+                    })
+                    .catch((registrationError) => {
+                        console.log('SW registration failed: ', registrationError);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>

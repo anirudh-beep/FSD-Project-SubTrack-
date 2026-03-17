@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📅 SubTrack - Profile</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <h1 class="logo">📅 SubTrack</h1>
+            <nav class="nav">
+                <a href="index.html" class="nav-link">Dashboard</a>
+                <a href="profile.html" class="nav-link active">Profile</a>
+                <button id="themeToggle" class="theme-toggle">🌙</button>
+                <button id="logoutBtn" class="logout-btn">Logout</button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="container">
+            <div class="card form-card">
+                <h2>Profile Settings</h2>
+                <form id="profileForm">
+                    <div class="form-group">
+                        <label for="userName">Full Name</label>
+                        <input type="text" id="userName" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="userEmail">Email</label>
+                        <input type="email" id="userEmail" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="currency">Currency Preference</label>
+                        <select id="currency">
+                            <option value="₹">₹ (INR)</option>
+                            <option value="$">$ (USD)</option>
+                            <option value="€">€ (EUR)</option>
+                            <option value="£">£ (GBP)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="monthlyBudget">Monthly Budget</label>
+                        <input type="number" id="monthlyBudget" min="100" placeholder="5000">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="notifications">
+                            <span class="checkmark"></span>
+                            Enable renewal notifications
+                        </label>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="darkMode">
+                            <span class="checkmark"></span>
+                            Dark mode by default
+                        </label>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">Save Settings</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h3>Data Management</h3>
+                <div class="data-management">
+                    <button id="exportData" class="btn btn-secondary">Export All Data</button>
+                    <button id="importData" class="btn btn-secondary">Import Data</button>
+                    <input type="file" id="importDataFile" accept=".json" style="display: none;">
+                    <button id="clearData" class="btn btn-danger">Clear All Data</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/auth.js"></script>
+    <script>
+        $(document).ready(function() {
+            // Check if user is logged in
+            checkAuth();
+            
+            // Load profile data
+            loadProfile();
+            
+            // Theme toggle
+            $('#themeToggle').click(function() {
+                toggleTheme();
+            });
+            
+            // Logout
+            $('#logoutBtn').click(function() {
+                logout();
+            });
+            
+            // Save profile
+            $('#profileForm').submit(function(e) {
+                e.preventDefault();
+                saveProfile();
+            });
+        });
+
+        function loadProfile() {
+            const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
+            const settings = JSON.parse(localStorage.getItem('userSettings') || '{}');
+            
+            $('#userName').val(user.name || '');
+            $('#userEmail').val(user.email || '');
+            $('#currency').val(settings.currency || '₹');
+            $('#monthlyBudget').val(settings.monthlyBudget || 5000);
+            $('#notifications').prop('checked', settings.notifications !== false);
+            $('#darkMode').prop('checked', localStorage.getItem('theme') === 'dark');
+        }
+
+        function saveProfile() {
+            const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
+            const settings = {
+                currency: $('#currency').val(),
+                monthlyBudget: parseFloat($('#monthlyBudget').val()) || 5000,
+                notifications: $('#notifications').is(':checked')
+            };
+            
+            user.name = $('#userName').val();
+            user.email = $('#userEmail').val();
+            
+            localStorage.setItem('currentUser', JSON.stringify(user));
+            localStorage.setItem('userSettings', JSON.stringify(settings));
+            
+            // Handle dark mode setting
+            const darkMode = $('#darkMode').is(':checked');
+            const newTheme = darkMode ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeToggle(newTheme);
+            
+            showToast('Profile updated successfully!', 'success');
+        }
+
+        // Data management functions
+        $('#exportData').click(function() {
+            const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+            const exportData = {
+                user: currentUser,
+                subscriptions: JSON.parse(localStorage.getItem(`subscriptions_${currentUser.id}`) || '[]'),
+                categories: JSON.parse(localStorage.getItem(`categories_${currentUser.id}`) || '[]'),
+                settings: JSON.parse(localStorage.getItem('userSettings') || '{}'),
+                notifications: JSON.parse(localStorage.getItem(`notifications_${currentUser.id}`) || '[]'),
+                paymentHistory: JSON.parse(localStorage.getItem(`paymentHistory_${currentUser.id}`) || '[]'),
+                exportDate: new Date().toISOString(),
+                version: '1.0'
+            };
+            
+            const dataStr = JSON.stringify(exportData, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(dataBlob);
+            link.download = `subtrack-backup-${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+            
+            showToast('Data exported successfully!', 'success');
+        });
+
+        $('#importData').click(function() {
+            $('#importDataFile').click();
+        });
+
+        $('#importDataFile').change(function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    const importData = JSON.parse(event.target.result);
+                    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+                    
+                    if (importData.subscriptions) {
+                        localStorage.setItem(`subscriptions_${currentUser.id}`, JSON.stringify(importData.subscriptions));
+                    }
+                    if (importData.categories) {
+                        localStorage.setItem(`categories_${currentUser.id}`, JSON.stringify(importData.categories));
+                    }
+                    if (importData.settings) {
+                        localStorage.setItem('userSettings', JSON.stringify(importData.settings));
+                    }
+                    if (importData.notifications) {
+                        localStorage.setItem(`notifications_${currentUser.id}`, JSON.stringify(importData.notifications));
+                    }
+                    if (importData.paymentHistory) {
+                        localStorage.setItem(`paymentHistory_${currentUser.id}`, JSON.stringify(importData.paymentHistory));
+                    }
+                    
+                    showToast('Data imported successfully!', 'success');
+                    setTimeout(() => window.location.reload(), 1000);
+                } catch (error) {
+                    showToast('Error importing data', 'error');
+                }
+            };
+            reader.readAsText(file);
+            e.target.value = '';
+        });
+
+        $('#clearData').click(function() {
+            if (confirm('Are you sure you want to clear all data? This action cannot be undone.')) {
+                const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+                
+                // Clear user-specific data
+                localStorage.removeItem(`subscriptions_${currentUser.id}`);
+                localStorage.removeItem(`categories_${currentUser.id}`);
+                localStorage.removeItem(`notifications_${currentUser.id}`);
+                localStorage.removeItem(`paymentHistory_${currentUser.id}`);
+                localStorage.removeItem(`receipts_${currentUser.id}`);
+                localStorage.removeItem('userSettings');
+                
+                showToast('All data cleared successfully!', 'success');
+                setTimeout(() => window.location.reload(), 1000);
+            }
+        });
+
+        function showToast(message, type = 'info') {
+            if ($('#toastContainer').length === 0) {
+                $('body').append('<div id="toastContainer" class="toast-container"></div>');
+            }
+            
+            const toast = $(`
+                <div class="toast ${type}">
+                    <div class="toast-content">
+                        <p>${message}</p>
+                    </div>
+                </div>
+            `);
+            
+            $('#toastContainer').append(toast);
+            
+            setTimeout(() => {
+                toast.fadeOut(() => toast.remove());
+            }, 3000);
+        }
+
+        function updateThemeToggle(theme) {
+            const toggleBtn = $('#themeToggle');
+            if (toggleBtn.length) {
+                toggleBtn.text(theme === 'dark' ? '☀️' : '🌙');
+            }
+        }
+    </script>
+</body>
+</html>

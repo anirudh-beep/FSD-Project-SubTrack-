@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📅 SubTrack - Analytics</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <h1 class="logo">📅 SubTrack</h1>
+            <nav class="nav">
+                <a href="index.html" class="nav-link">Dashboard</a>
+                <a href="calendar.html" class="nav-link">Calendar</a>
+                <a href="analytics.html" class="nav-link active">Analytics</a>
+                <a href="notifications.html" class="nav-link">
+                    Notifications
+                    <span id="notificationBadge" class="notification-badge" style="display: none;">0</span>
+                </a>
+                <a href="profile.html" class="nav-link">Profile</a>
+                <button id="themeToggle" class="theme-toggle">🌙</button>
+                <div class="user-menu">
+                    <button id="userMenuBtn" class="user-menu-btn">
+                        <span id="currentUserName">User</span> ▼
+                    </button>
+                    <div id="userDropdown" class="user-dropdown">
+                        <a href="#" id="switchAccount">Switch Account</a>
+                        <a href="#" id="changePassword">Change Password</a>
+                        <a href="#" id="logoutBtn">Logout</a>
+                    </div>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="container">
+            <!-- Analytics Summary -->
+            <div class="analytics-summary">
+                <div class="card">
+                    <h3>Highest Spending</h3>
+                    <div class="highlight-subscription">
+                        <div class="subscription-icon">💰</div>
+                        <div class="subscription-details">
+                            <p class="subscription-name" id="highestSpendingName">-</p>
+                            <p class="subscription-amount" id="highestSpendingAmount">₹0</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3>Monthly Trend</h3>
+                    <div class="trend-indicator">
+                        <span id="trendDirection">📈</span>
+                        <span id="trendPercentage">0%</span>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3>Total Saved</h3>
+                    <p class="card-value" id="totalSaved">₹0</p>
+                    <small>From cancelled subscriptions</small>
+                </div>
+            </div>
+
+            <!-- Charts -->
+            <div class="charts-grid">
+                <div class="card">
+                    <div class="chart-header">
+                        <h2>Monthly Spending Trend</h2>
+                        <button id="downloadReport" class="btn btn-primary">Download Report</button>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="trendChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Category Distribution</h2>
+                    <div class="chart-container">
+                        <canvas id="pieChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Payment Methods</h2>
+                    <div class="chart-container">
+                        <canvas id="paymentChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Spending Insights</h2>
+                    <div id="spendingInsights" class="insights-list">
+                        <!-- Insights will be generated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/auth.js"></script>
+    <script src="js/analytics.js"></script>
+</body>
+</html>

@@ -6,6 +6,7 @@ let paymentChart = null;
 $(document).ready(async function() {
     checkAuth();
     await fetchUserSubscriptions();
+    await updateCurrentUserName();
     initializeAnalytics();
     
     $('#downloadReport').click(downloadReport);
@@ -21,7 +22,6 @@ function initializeAnalytics() {
         initializeCharts();
         generateInsights();
     }, 500);
-    updateCurrentUserName();
 }
 
 function updateAnalyticsSummary() {
@@ -553,9 +553,11 @@ async function fetchUserSubscriptions() {
     return window._analyticsSubscriptions;
 }
 
-function updateCurrentUserName() {
-    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-    $('#currentUserName').text(currentUser.name || 'User');
+async function updateCurrentUserName() {
+    const { data: { session } } = await _supabase.auth.getSession();
+    if (!session) return;
+    const name = session.user.user_metadata?.name || session.user.email.split('@')[0];
+    $('#currentUserName').text(name);
 }
 
 function setupUserMenu() {

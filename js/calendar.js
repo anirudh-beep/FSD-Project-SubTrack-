@@ -5,6 +5,7 @@ let selectedDate = null;
 $(document).ready(async function() {
     checkAuth();
     await fetchUserSubscriptions();
+    await updateCurrentUserName();
     initializeCalendar();
     
     $('#prevMonth').click(() => navigateMonth(-1));
@@ -18,7 +19,6 @@ $(document).ready(async function() {
 
 function initializeCalendar() {
     renderCalendar();
-    updateCurrentUserName();
 }
 
 function renderCalendar() {
@@ -206,9 +206,11 @@ function paySubscription(subscriptionId) {
     renderCalendar(); // Refresh calendar
 }
 
-function updateCurrentUserName() {
-    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-    $('#currentUserName').text(currentUser.name || 'User');
+async function updateCurrentUserName() {
+    const { data: { session } } = await _supabase.auth.getSession();
+    if (!session) return;
+    const name = session.user.user_metadata?.name || session.user.email.split('@')[0];
+    $('#currentUserName').text(name);
 }
 
 function setupUserMenu() {

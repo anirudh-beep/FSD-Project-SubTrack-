@@ -9,6 +9,7 @@ let notificationSettings = {
 $(document).ready(async function() {
     checkAuth();
     await fetchUserSubscriptions();
+    await updateCurrentUserName();
     initializeNotifications();
     
     // Event handlers
@@ -29,7 +30,6 @@ function initializeNotifications() {
     generateRenewalNotifications();
     renderNotifications();
     updateNotificationBadge();
-    updateCurrentUserName();
 }
 
 function loadNotifications() {
@@ -333,9 +333,11 @@ async function fetchUserSubscriptions() {
     window._notifSubscriptions = (data || []).map(s => ({ ...s, billingCycle: s.billing_cycle, startDate: s.start_date }));
 }
 
-function updateCurrentUserName() {
-    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-    $('#currentUserName').text(currentUser.name || 'User');
+async function updateCurrentUserName() {
+    const { data: { session } } = await _supabase.auth.getSession();
+    if (!session) return;
+    const name = session.user.user_metadata?.name || session.user.email.split('@')[0];
+    $('#currentUserName').text(name);
 }
 
 function setupUserMenu() {

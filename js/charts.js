@@ -93,44 +93,17 @@ function initializeChart() {
 }
 
 function getChartData() {
-    // Get current user's subscriptions
-    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-    const userKey = `subscriptions_${currentUser.id}`;
-    const subscriptions = JSON.parse(localStorage.getItem(userKey) || '[]');
-    
-    // Group by category and calculate monthly spending
-    const categorySpending = {
-        'OTT': 0,
-        'Software': 0,
-        'Education': 0,
-        'Fitness': 0
-    };
-    
-    subscriptions.forEach(sub => {
-        const monthlyAmount = sub.billingCycle === 'Yearly' ? sub.amount / 12 : sub.amount;
-        categorySpending[sub.category] += monthlyAmount;
+    const subs = (window._getSubscriptions && window._getSubscriptions()) || [];
+    const categorySpending = {};
+    subs.forEach(sub => {
+        const monthlyAmount = sub.billing_cycle === 'Yearly' ? sub.amount / 12 : sub.amount;
+        categorySpending[sub.category] = (categorySpending[sub.category] || 0) + monthlyAmount;
     });
-    
-    // Filter out categories with zero spending
-    const labels = [];
-    const data = [];
-    
-    Object.entries(categorySpending).forEach(([category, amount]) => {
-        if (amount > 0) {
-            labels.push(category);
-            data.push(parseFloat(amount.toFixed(2)));
-        }
+    const labels = [], data = [];
+    Object.entries(categorySpending).forEach(([cat, amt]) => {
+        if (amt > 0) { labels.push(cat); data.push(parseFloat(amt.toFixed(2))); }
     });
-    
-    // If no data, show placeholder
-    if (labels.length === 0) {
-        return {
-            labels: ['No Data'],
-            data: [0]
-        };
-    }
-    
-    return { labels, data };
+    return labels.length === 0 ? { labels: ['No Data'], data: [0] } : { labels, data };
 }
 
 function updateChart() {

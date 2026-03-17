@@ -12,8 +12,12 @@ create table if not exists subscriptions (
   category text not null,
   autopay text default 'OFF',
   payment_method text default 'card',
+  payment_status text default 'Pending',
   created_at timestamptz default now()
 );
+
+-- Run this if the table already exists (adds missing column):
+-- alter table subscriptions add column if not exists payment_status text default 'Pending';
 alter table subscriptions enable row level security;
 create policy "Users manage own subscriptions" on subscriptions
   for all using (auth.uid() = user_id);

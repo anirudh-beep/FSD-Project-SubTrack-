@@ -77,8 +77,24 @@
                         </label>
                     </div>
                     <div class="setting-item">
-                        <label for="reminderDays">Reminder days before renewal:</label>
+                        <label for="reminderDays">In-app reminder days before renewal:</label>
                         <select id="reminderDays">
+                            <option value="3">3 days</option>
+                            <option value="7" selected>7 days</option>
+                            <option value="14">14 days</option>
+                        </select>
+                    </div>
+                    <h4>Email Notifications</h4>
+                    <div class="setting-item">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="emailNotificationsEnabled" checked>
+                            <span class="checkmark"></span>
+                            Email notifications
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <label for="emailReminderDays">Email reminder days before renewal:</label>
+                        <select id="emailReminderDays">
                             <option value="3">3 days</option>
                             <option value="7" selected>7 days</option>
                             <option value="14">14 days</option>

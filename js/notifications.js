@@ -3,7 +3,9 @@ let notifications = [];
 let notificationSettings = {
     browserNotifications: true,
     soundAlerts: true,
-    reminderDays: 7
+    reminderDays: 7,
+    emailNotificationsEnabled: true,
+    emailReminderDays: 7
 };
 
 $(document).ready(async function() {
@@ -225,30 +227,70 @@ function updateNotificationBadge() {
     }
 }
 
-function loadNotificationSettings() {
-    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-    const userKey = `notificationSettings_${currentUser.id}`;
-    const savedSettings = JSON.parse(localStorage.getItem(userKey) || '{}');
-    
-    notificationSettings = { ...notificationSettings, ...savedSettings };
-    
+async function loadNotificationSettings() {
+    const { data: { session } } = await _supabase.auth.getSession();
+    if (!session) return;
+    const uid = session.user.id;
+
+    const { data } = await _supabase.from('user_settings').select('*').eq('user_id', uid).single();
+
+    const defaults = {
+        emailNotificationsEnabled: true,
+        emailReminderDays: 7,
+        reminderDays: 7,
+        browserNotifications: true,
+        soundAlerts: true
+    };
+
+    const row = data || {};
+    notificationSettings = {
+        emailNotificationsEnabled: row.email_notifications_enabled ?? defaults.emailNotificationsEnabled,
+        emailReminderDays: row.email_reminder_days ?? defaults.emailReminderDays,
+        reminderDays: row.reminder_days ?? defaults.reminderDays,
+        browserNotifications: row.browser_notifications ?? defaults.browserNotifications,
+        soundAlerts: row.sound_alerts ?? defaults.soundAlerts
+    };
+
     // Update UI
+    $('#emailNotificationsEnabled').prop('checked', notificationSettings.emailNotificationsEnabled);
+    $('#emailReminderDays').val(notificationSettings.emailReminderDays);
     $('#browserNotifications').prop('checked', notificationSettings.browserNotifications);
     $('#soundAlerts').prop('checked', notificationSettings.soundAlerts);
     $('#reminderDays').val(notificationSettings.reminderDays);
 }
 
-function saveNotificationSettings() {
+async function saveNotificationSettings() {
+    const { data: { session } } = await _supabase.auth.getSession();
+    if (!session) return;
+    const uid = session.user.id;
+
+    const emailNotificationsEnabled = $('#emailNotificationsEnabled').is(':checked');
+    const emailReminderDays = parseInt($('#emailReminderDays').val());
+    const reminderDays = parseInt($('#reminderDays').val());
+    const browserNotifications = $('#browserNotifications').is(':checked');
+    const soundAlerts = $('#soundAlerts').is(':checked');
+
+    const { error } = await _supabase.from('user_settings').upsert({
+        user_id: uid,
+        email_notifications_enabled: emailNotificationsEnabled,
+        email_reminder_days: emailReminderDays,
+        reminder_days: reminderDays,
+        notifications: browserNotifications
+    });
+
+    if (error) {
+        showToast('Failed to save settings', 'error');
+        return;
+    }
+
     notificationSettings = {
-        browserNotifications: $('#browserNotifications').is(':checked'),
-        soundAlerts: $('#soundAlerts').is(':checked'),
-        reminderDays: parseInt($('#reminderDays').val())
+        emailNotificationsEnabled,
+        emailReminderDays,
+        reminderDays,
+        browserNotifications,
+        soundAlerts
     };
-    
-    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-    const userKey = `notificationSettings_${currentUser.id}`;
-    localStorage.setItem(userKey, JSON.stringify(notificationSettings));
-    
+
     showToast('Notification settings saved', 'success');
 }
 

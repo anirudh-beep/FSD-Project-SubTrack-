@@ -81,3 +81,17 @@ create table if not exists notifications (
 alter table notifications enable row level security;
 create policy "Users manage own notifications" on notifications
   for all using (auth.uid() = user_id);
+
+-- ============================================================
+-- Migration: email-notifications feature
+-- ============================================================
+
+-- user_settings: add email notification preference columns
+ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS email_notifications_enabled boolean DEFAULT true;
+ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS email_reminder_days integer DEFAULT 7;
+ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS reminder_days integer DEFAULT 7;
+
+-- notifications: extend type check constraint to include 'email_summary'
+ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_type_check;
+ALTER TABLE notifications ADD CONSTRAINT notifications_type_check
+  CHECK (type IN ('renewal', 'payment', 'system', 'warning', 'success', 'email_summary'));

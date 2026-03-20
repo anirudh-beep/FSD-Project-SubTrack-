@@ -8,9 +8,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 // ---------------------------------------------------------------------------
 // Environment
 // ---------------------------------------------------------------------------
-const RESEND_API_KEY = Deno.env.get("re_e21gUTSN_KYZ4shRx2r4NQP7U1rAkAReS") ?? "";
-const SUPABASE_URL = Deno.env.get("https://dytysgpkgdjgoasutssx.supabase.co") ?? "";
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5dHlzZ3BrZ2RqZ29hc3V0c3N4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MzczMTEwMiwiZXhwIjoyMDg5MzA3MTAyfQ.QsAt0Xyj2-3lu1l52q0ieA1Yc3R9iRrb0s9hfKLlQHk") ?? "";
+const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
   auth: { persistSession: false },

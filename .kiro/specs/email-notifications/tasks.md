@@ -125,7 +125,7 @@ Implement automated daily email reminders for SubTrack using a Supabase Edge Fun
     - _Requirements: 7.4, 4.5, 4.6_
     - File: `js/notifications.test.js`
 
-- [ ] 7. Final checkpoint — all tests pass
+- [x] 7. Final checkpoint — all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes

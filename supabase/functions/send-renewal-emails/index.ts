@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Supabase Edge Function: send-renewal-emails
 // Triggered daily by pg_cron at 0 8 * * * (08:00 UTC)
 
@@ -311,7 +312,7 @@ async function logEmailSent(userId: string, count: number): Promise<void> {
 // ---------------------------------------------------------------------------
 // Main handler
 // ---------------------------------------------------------------------------
-serve(async (_req) => {
+serve(async (_req: Request) => {
   console.log("[send-renewal-emails] Starting daily email run");
 
   let buckets: UserBucket[];

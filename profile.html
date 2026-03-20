@@ -85,173 +85,164 @@
 
     <script src="js/auth.js?v=2"></script>
     <script>
-        $(document).ready(function() {
-            // Check if user is logged in
-            checkAuth();
-            
-            // Load profile data
-            loadProfile();
-            
-            // Theme toggle
-            $('#themeToggle').click(function() {
-                toggleTheme();
-            });
-            
-            // Logout
-            $('#logoutBtn').click(function() {
-                logout();
-            });
-            
-            // Save profile
-            $('#profileForm').submit(function(e) {
-                e.preventDefault();
-                saveProfile();
-            });
+        $(document).ready(async function() {
+            const authed = await checkAuth();
+            if (!authed) return;
+
+            await loadProfile();
+
+            $('#themeToggle').click(function() { toggleTheme(); });
+            $('#logoutBtn').click(function() { logout(); });
+            $('#profileForm').submit(function(e) { e.preventDefault(); saveProfile(); });
+            $('#exportData').click(exportData);
+            $('#importData').click(function() { $('#importDataFile').click(); });
+            $('#importDataFile').change(importData);
+            $('#clearData').click(clearData);
         });
 
-        function loadProfile() {
-            const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
-            const settings = JSON.parse(localStorage.getItem('userSettings') || '{}');
-            
-            $('#userName').val(user.name || '');
-            $('#userEmail').val(user.email || '');
-            $('#currency').val(settings.currency || '₹');
-            $('#monthlyBudget').val(settings.monthlyBudget || 5000);
-            $('#notifications').prop('checked', settings.notifications !== false);
+        async function loadProfile() {
+            const { data: { session } } = await _supabase.auth.getSession();
+            if (!session) return;
+
+            $('#userEmail').val(session.user.email);
+            $('#userName').val(session.user.user_metadata?.name || session.user.email.split('@')[0]);
+
+            const { data } = await _supabase.from('user_settings').select('*').eq('user_id', session.user.id).single();
+            if (data) {
+                $('#currency').val(data.currency || '₹');
+                $('#monthlyBudget').val(data.monthly_budget || 5000);
+                $('#notifications').prop('checked', data.notifications !== false);
+            }
             $('#darkMode').prop('checked', localStorage.getItem('theme') === 'dark');
         }
 
-        function saveProfile() {
-            const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
-            const settings = {
+        async function saveProfile() {
+            const { data: { session } } = await _supabase.auth.getSession();
+            if (!session) return;
+            const uid = session.user.id;
+
+            const name = $('#userName').val().trim();
+
+            // Update auth metadata (name)
+            await _supabase.auth.updateUser({ data: { name } });
+
+            // Upsert user_settings
+            const { error } = await _supabase.from('user_settings').upsert({
+                user_id: uid,
+                full_name: name,
                 currency: $('#currency').val(),
-                monthlyBudget: parseFloat($('#monthlyBudget').val()) || 5000,
+                monthly_budget: parseFloat($('#monthlyBudget').val()) || 5000,
                 notifications: $('#notifications').is(':checked')
-            };
-            
-            user.name = $('#userName').val();
-            user.email = $('#userEmail').val();
-            
-            localStorage.setItem('currentUser', JSON.stringify(user));
-            localStorage.setItem('userSettings', JSON.stringify(settings));
-            
-            // Handle dark mode setting
+            });
+
+            if (error) { showToast('Error saving settings', 'error'); return; }
+
             const darkMode = $('#darkMode').is(':checked');
             const newTheme = darkMode ? 'dark' : 'light';
             document.documentElement.setAttribute('data-theme', newTheme);
             localStorage.setItem('theme', newTheme);
             updateThemeToggle(newTheme);
-            
+
             showToast('Profile updated successfully!', 'success');
         }
 
-        // Data management functions
-        $('#exportData').click(function() {
-            const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-            const exportData = {
-                user: currentUser,
-                subscriptions: JSON.parse(localStorage.getItem(`subscriptions_${currentUser.id}`) || '[]'),
-                categories: JSON.parse(localStorage.getItem(`categories_${currentUser.id}`) || '[]'),
-                settings: JSON.parse(localStorage.getItem('userSettings') || '{}'),
-                notifications: JSON.parse(localStorage.getItem(`notifications_${currentUser.id}`) || '[]'),
-                paymentHistory: JSON.parse(localStorage.getItem(`paymentHistory_${currentUser.id}`) || '[]'),
+        async function exportData() {
+            const { data: { session } } = await _supabase.auth.getSession();
+            if (!session) return;
+            const uid = session.user.id;
+
+            const [subs, cats, settings, notifs, payments] = await Promise.all([
+                _supabase.from('subscriptions').select('*').eq('user_id', uid),
+                _supabase.from('categories').select('*').eq('user_id', uid),
+                _supabase.from('user_settings').select('*').eq('user_id', uid).single(),
+                _supabase.from('notifications').select('*').eq('user_id', uid),
+                _supabase.from('payment_history').select('*').eq('user_id', uid)
+            ]);
+
+            const exportObj = {
+                subscriptions: subs.data || [],
+                categories: cats.data || [],
+                settings: settings.data || {},
+                notifications: notifs.data || [],
+                paymentHistory: payments.data || [],
                 exportDate: new Date().toISOString(),
-                version: '1.0'
+                version: '2.0'
             };
-            
-            const dataStr = JSON.stringify(exportData, null, 2);
-            const dataBlob = new Blob([dataStr], { type: 'application/json' });
-            
+
+            const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: 'application/json' });
             const link = document.createElement('a');
-            link.href = URL.createObjectURL(dataBlob);
+            link.href = URL.createObjectURL(blob);
             link.download = `subtrack-backup-${new Date().toISOString().split('T')[0]}.json`;
             link.click();
-            
             showToast('Data exported successfully!', 'success');
-        });
+        }
 
-        $('#importData').click(function() {
-            $('#importDataFile').click();
-        });
-
-        $('#importDataFile').change(function(e) {
+        async function importData(e) {
             const file = e.target.files[0];
             if (!file) return;
-            
+            const { data: { session } } = await _supabase.auth.getSession();
+            if (!session) return;
+            const uid = session.user.id;
+
             const reader = new FileReader();
-            reader.onload = function(event) {
+            reader.onload = async function(event) {
                 try {
-                    const importData = JSON.parse(event.target.result);
-                    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-                    
-                    if (importData.subscriptions) {
-                        localStorage.setItem(`subscriptions_${currentUser.id}`, JSON.stringify(importData.subscriptions));
+                    const d = JSON.parse(event.target.result);
+
+                    if (d.subscriptions?.length) {
+                        const rows = d.subscriptions.map(s => ({ ...s, user_id: uid }));
+                        await _supabase.from('subscriptions').upsert(rows);
                     }
-                    if (importData.categories) {
-                        localStorage.setItem(`categories_${currentUser.id}`, JSON.stringify(importData.categories));
+                    if (d.categories?.length) {
+                        const rows = d.categories.map(c => ({ ...c, user_id: uid }));
+                        await _supabase.from('categories').upsert(rows);
                     }
-                    if (importData.settings) {
-                        localStorage.setItem('userSettings', JSON.stringify(importData.settings));
-                    }
-                    if (importData.notifications) {
-                        localStorage.setItem(`notifications_${currentUser.id}`, JSON.stringify(importData.notifications));
-                    }
-                    if (importData.paymentHistory) {
-                        localStorage.setItem(`paymentHistory_${currentUser.id}`, JSON.stringify(importData.paymentHistory));
-                    }
-                    
+
                     showToast('Data imported successfully!', 'success');
                     setTimeout(() => window.location.reload(), 1000);
-                } catch (error) {
+                } catch (err) {
                     showToast('Error importing data', 'error');
                 }
             };
             reader.readAsText(file);
             e.target.value = '';
-        });
+        }
 
-        $('#clearData').click(function() {
-            if (confirm('Are you sure you want to clear all data? This action cannot be undone.')) {
-                const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-                
-                // Clear user-specific data
-                localStorage.removeItem(`subscriptions_${currentUser.id}`);
-                localStorage.removeItem(`categories_${currentUser.id}`);
-                localStorage.removeItem(`notifications_${currentUser.id}`);
-                localStorage.removeItem(`paymentHistory_${currentUser.id}`);
-                localStorage.removeItem(`receipts_${currentUser.id}`);
-                localStorage.removeItem('userSettings');
-                
-                showToast('All data cleared successfully!', 'success');
-                setTimeout(() => window.location.reload(), 1000);
+        async function clearData() {
+            if (!confirm('Are you sure you want to clear ALL your data? This cannot be undone.')) return;
+
+            const { data: { session } } = await _supabase.auth.getSession();
+            if (!session) return;
+            const uid = session.user.id;
+
+            const [r1, r2, r3, r4] = await Promise.all([
+                _supabase.from('subscriptions').delete().eq('user_id', uid),
+                _supabase.from('categories').delete().eq('user_id', uid),
+                _supabase.from('notifications').delete().eq('user_id', uid),
+                _supabase.from('payment_history').delete().eq('user_id', uid)
+            ]);
+
+            const errs = [r1, r2, r3, r4].filter(r => r.error).map(r => r.error.message);
+            if (errs.length) {
+                showToast('Error clearing some data: ' + errs[0], 'error');
+                return;
             }
-        });
+
+            showToast('All data cleared!', 'success');
+            setTimeout(() => window.location.reload(), 1000);
+        }
 
         function showToast(message, type = 'info') {
             if ($('#toastContainer').length === 0) {
                 $('body').append('<div id="toastContainer" class="toast-container"></div>');
             }
-            
-            const toast = $(`
-                <div class="toast ${type}">
-                    <div class="toast-content">
-                        <p>${message}</p>
-                    </div>
-                </div>
-            `);
-            
+            const toast = $(`<div class="toast ${type}"><div class="toast-content"><p>${message}</p></div></div>`);
             $('#toastContainer').append(toast);
-            
-            setTimeout(() => {
-                toast.fadeOut(() => toast.remove());
-            }, 3000);
+            setTimeout(() => toast.fadeOut(() => toast.remove()), 3000);
         }
 
         function updateThemeToggle(theme) {
-            const toggleBtn = $('#themeToggle');
-            if (toggleBtn.length) {
-                toggleBtn.text(theme === 'dark' ? '☀️' : '🌙');
-            }
+            $('#themeToggle').text(theme === 'dark' ? '☀️' : '🌙');
         }
     </script>
 </body>
